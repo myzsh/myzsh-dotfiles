@@ -1,6 +1,28 @@
 globalvar DOTFILES_REPO "" "Path to repository for dotfiles"
 globalvar DOTFILES_DIR "$HOME/dotfiles" "Path to local cache of dot files"
 
+osx_readlink() {
+  TARGET_FILE=$1
+  
+  cd `dirname $TARGET_FILE`
+  TARGET_FILE=`basename $TARGET_FILE`
+  
+  # Iterate down a (possible) chain of symlinks
+  while [ -L "$TARGET_FILE" ]
+  do
+      TARGET_FILE=`readlink $TARGET_FILE`
+      cd `dirname $TARGET_FILE`
+      TARGET_FILE=`basename $TARGET_FILE`
+  done
+  
+  # Compute the canonicalized name by finding the physical path 
+  # for the directory we're in and appending the target file.
+  PHYS_DIR=`pwd -P`
+  RESULT=$PHYS_DIR/$TARGET_FILE
+  echo $RESULT
+}
+
+
 if [ -d "$DOTFILES_DIR" ]; then
 	# check out the repo locally, if we don't already have it
 	if [ -n "$DOTFILES_REPO" -a ! -d "$DOTFILES_DIR" ]; then
@@ -9,14 +31,26 @@ if [ -d "$DOTFILES_DIR" ]; then
 	# update the repo if it's stale at all
 	# TODO .svn support
 	( cd "$DOTFILES_DIR"
-	if [ $[ $(date +%s) - $(stat -c %Y "$DOTFILES_DIR/.git/FETCH_HEAD") ] -gt $[ 86400 * 7 ] ]; then
+
+        if isosx; then
+                STAT=$(stat -f "%m" "$DOTFILES_DIR/.git/FETCH_HEAD")
+        else
+                STAT=$(stat -c %Y "$DOTFILES_DIR/.git/FETCH_HEAD")
+        fi
+
+        if [ $[ $(date +%s) - STAT ] -gt $[ 86400 * 7 ] ]; then
 		git pull
 	fi
 	for f in *; do
 		[ -e "$HOME/.$f" -a ! -h "$HOME/.$f" ] && continue
 		# check to see if our dotfile is linked to where we expect
 		# if it's not, remove it and relink it
-		[ "$(readlink -f "$HOME/.$f")" != "$DOTFILES_DIR/$f" ] && ln -f -s "${DOTFILES_DIR##$HOME/}/$f" "$HOME/.$f"
+                if isosx; then
+                       LINK=$(osx_readlink "$HOME/.$f")
+                else
+                       LINK=$(readlink -f "$HOME/.$f")
+                fi
+		[ "$LINK" != "$DOTFILES_DIR/$f" ] && ln -f -s "${DOTFILES_DIR##$HOME/}/$f" "$HOME/.$f"
 	done
 	)
 fi
@@ -25,8 +59,15 @@ dotfiles_check() {
 	(cd "$DOTFILES_DIR"
 	for f in *; do
 		[ -e "$HOME/.$f" -a ! -h "$HOME/.$f" ] && echo "$f is not a link"
-		[ "$(readlink -f "$HOME/.$f")" != "$DOTFILES_DIR/$f" ] && echo "$f doesn't point at our dotfile"
+
+                if isosx; then
+                       LINK=$(osx_readlink "$HOME/.$f")
+                else
+                       LINK=$(readlink -f "$HOME/.$f")
+                fi
+		[ "$LINK" != "$DOTFILES_DIR/$f" ] && echo "$f doesn't point at our dotfile"
 	done
 	)
 }
+
 # vim: filetype=zsh noexpandtab
