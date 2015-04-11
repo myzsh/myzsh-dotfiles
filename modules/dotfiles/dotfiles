@@ -9,7 +9,8 @@ if [ -d "$DOTFILES_DIR" ]; then
 	# update the repo if it's stale at all
 	# TODO .svn support
 	( cd "$DOTFILES_DIR"
-	if [ $[ $(date +%s) - $(stat -c %Y "$DOTFILES_DIR/.git/FETCH_HEAD") ] -gt $[ 86400 * 7 ] ]; then
+	if [ ! -f "$DOTFILES_DIR/.git/FETCH_HEAD" ] || [ $[ $(date +%s) - $(stat -c %Y "$DOTFILES_DIR/.git/FETCH_HEAD") ] -gt $[ 86400 * 7 ] ]; then
+		echo "Checking for updates to $DOTFILES_DIR"
 		git pull
 	fi
 	for f in *; do
