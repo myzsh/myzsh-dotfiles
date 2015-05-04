@@ -13,6 +13,11 @@ if [ -d "$DOTFILES_DIR" ]; then
 		echo "Checking for updates to $DOTFILES_DIR"
 		git pull
 	fi
+
+	# Check if there are uncommited changes to yoru dotfiles
+	if [ $(git status --porcelain 2>/dev/null | awk '/^ M/ {print $1}' | sort | uniq -c | awk '{printf $1}') -gt 0 ]; then
+		echo "Uncommited changes to $DOTFILES_DIR"
+	fi
 	for f in *; do
 		[ -e "$HOME/.$f" -a ! -h "$HOME/.$f" ] && continue
 		# check to see if our dotfile is linked to where we expect
