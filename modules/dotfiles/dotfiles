@@ -15,7 +15,7 @@ if [ -d "$DOTFILES_DIR" ]; then
 	fi
 
 	# Check if there are uncommited changes to yoru dotfiles
-	if [ $(git status --porcelain 2>/dev/null | awk '/^ M/ {print $1}' | sort | uniq -c | awk '{printf $1}') -gt 0 ]; then
+	if [ "$(git status --porcelain 2>/dev/null | awk '/^ M/ {print $1}' | wc -l)" -gt 0 ]; then
 		echo "Uncommited changes to $DOTFILES_DIR"
 	fi
 	for f in *; do
